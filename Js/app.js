@@ -64,15 +64,18 @@ const questions = [
 // Initialize Supabase when page loads
 window.addEventListener('load', function() {
     try {
-        if (typeof supabase !== 'undefined') {
+        //if () {
             const SUPABASE_URL = 'https://jmaxlblmncctabomgfqw.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA';
+            console.log(SUPABASE_URL);
+            const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA";
+            console.log(SUPABASE_ANON_KEY);
+            console.log('jshdjsk:', supabase);
             const { createClient } = supabase;
             supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             console.log('Supabase initialized successfully');
-        } else {
-            console.log('Supabase not loaded, quiz will work without database');
-        }
+        //} else {
+        //    console.log('Supabase not loaded, quiz will work without database');
+        //}
     } catch (error) {
         console.error('Error initializing Supabase:', error);
     }
@@ -223,6 +226,8 @@ async function showResults() {
 
     // Save to database (quiz_responses)
     const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    console.log('user:', user);
+    console.log("supa:", supabaseClient);
     if (user && supabaseClient) {
         try {
             const { data, error } = await supabaseClient
