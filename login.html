@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Mental Health Check-In</title>
+    <link rel="stylesheet" href="./styles/styles.css">
+    <link rel="stylesheet" href="./styles/login.css">
+</head>
+<body>
+    <!-- Left Navigation Bar -->
+    <div id="nav-placeholder">
+
+    <script>
+      fetch("nav.html")
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("nav-placeholder").innerHTML = data;
+    setupDynamicNav(); // run JS after loading
+  });
+
+// Change nav links dynamically based on login state
+function setupDynamicNav() {
+  const navLinks = document.getElementById("nav-links");
+  // FIXED: Changed from localStorage to sessionStorage to match login.html
+  const user = JSON.parse(sessionStorage.getItem("user")); 
+
+  if (user) {
+    navLinks.innerHTML = `
+      <li><a href="index.html">🏠 Home</a></li>
+      <li><a href="user.dashboard.html">👤 Dashboard</a></li>
+      <li><a href="#" onclick="logout()">🚪 Logout</a></li>
+    `;
+  } else {
+    navLinks.innerHTML = `
+      <li><a href="index.html">🏠 Home</a></li>
+      <li><a href="login.html">👤 Login</a></li>
+    `;
+  }
+}
+
+function logout() {
+  // FIXED: Changed from localStorage to sessionStorage
+  sessionStorage.removeItem("user");
+  window.location.href = 'login.html'; // Redirect to login after logout
+}
+    </script>
+</div>
+    <!-- Login Form -->
+    <div class="login-wrapper">
+        <div class="login-container">
+            <h2>Welcome Back</h2>
+            
+            <div class="general-error" id="generalError"></div>
+        
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" id="last_name" placeholder="Enter your last name" required>
+                    <div class="error-message" id="last_nameError"></div>
+                </div>
+        
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+        
+                <button type="submit" class="btn-login">Log In</button>
+            </form>
+        
+            <p class="signup-text">
+                Don't have an account? <a href="signup.html">Sign up</a>
+            </p>
+        </div>
+        
+        <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+        <script>
+            // Supabase configuration
+            const SUPABASE_URL = 'https://jmaxlblmncctabomgfqw.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA';
+            
+            const { createClient } = supabase;
+            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+            // Hash password function
+            async function hashPassword(password) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+        
+            // Clear all error messages
+            function clearErrors() {
+                document.querySelectorAll('.error-message').forEach(el => {
+                    el.classList.remove('show');
+                    el.textContent = '';
+                });
+                document.querySelectorAll('input').forEach(el => {
+                    el.classList.remove('error');
+                });
+                document.getElementById('generalError').classList.remove('show');
+            }
+        
+            // Show error message
+            function showError(fieldId, message) {
+                const errorEl = document.getElementById(fieldId + 'Error');
+                const inputEl = document.getElementById(fieldId);
+                if (errorEl) {
+                    errorEl.textContent = message;
+                    errorEl.classList.add('show');
+                }
+                if (inputEl) {
+                    inputEl.classList.add('error');
+                }
+            }
+        
+            // Show general error
+            function showGeneralError(message) {
+                const errorEl = document.getElementById('generalError');
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+            }
+        
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearErrors();
+                
+                const lastName = document.getElementById('last_name').value.trim();
+                const password = document.getElementById('password').value;
+        
+                // Validation
+                let hasError = false;
+        
+                if (!lastName) {
+                    showError('last_name', 'Last name is required');
+                    hasError = true;
+                }
+        
+                if (!password) {
+                    showError('password', 'Password is required');
+                    hasError = true;
+                }
+        
+                if (hasError) return;
+        
+                try {
+                    // Disable submit button
+                    const submitBtn = document.querySelector('.btn-login');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Logging In...';
+        
+                    // Hash the password
+                    const hashedPassword = await hashPassword(password);
+        
+                    // Query user from Supabase
+                    const { data, error } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('last_name', lastName)
+                        .eq('password', hashedPassword)
+                        .maybeSingle();
+        
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Log In';
+        
+                    if (error) {
+                        console.error('Login error:', error);
+                        showGeneralError('An error occurred. Please try again.');
+                        return;
+                    }
+        
+                    if (!data) {
+                        showGeneralError('Invalid last name or password. Please try again.');
+                        return;
+                    }
+        
+                    // Store user info in sessionStorage
+                    sessionStorage.setItem('user', JSON.stringify({
+                        user_id: data.user_id,
+                        first_name: data.first_name,
+                        last_name: data.last_name,
+                        email: data.email
+                    }));
+        
+                    // Redirect to home
+                    window.location.href = 'user.dashboard.html';
+        
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showGeneralError('An unexpected error occurred. Please try again.');
+                    
+                    const submitBtn = document.querySelector('.btn-login');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Log In';
+                }
+            });
+        
+            // Clear error when user types
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', function() {
+                    this.classList.remove('error');
+                    const errorEl = document.getElementById(this.id + 'Error');
+                    if (errorEl) {
+                        errorEl.classList.remove('show');
+                    }
+                    document.getElementById('generalError').classList.remove('show');
+                });
+            });
+        </script>
+</body>
+</html>

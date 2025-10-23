@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - Mental Health Check-In</title>
+    <link rel="stylesheet" href="./styles/styles.css">
+    <link rel="stylesheet" href="./styles/user.dashboard.css">
+</head>
+<body>
+    <!-- Left Navigation Bar -->
+    <nav class="left-nav">
+        <div class="nav-header">
+            <h2>💙 Check-In</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="index.html">🏠 Home</a></li>
+            <li><a href="user-dashboard.html" class="active">👤 Dashboard</a></li>
+        </ul>
+        <div class="nav-footer">
+            <p>Your mental health matters</p>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-wrapper">
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <h1>Welcome back, <span id="userName">User</span>! 👋</h1>
+                <p>Here's your mental health journey overview</p>
+            </div>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="totalQuizzes">0</div>
+                    <div class="stat-label">Total Check-Ins</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="totalReviews">0</div>
+                    <div class="stat-label">Reviews Given</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="avgScore">0%</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="memberSince">-</div>
+                    <div class="stat-label">Member Since</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- User Information Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <span class="icon">👤</span>
+                        <h3>My Information</h3>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">First Name:</span>
+                        <span class="user-info-value" id="userFirstName">-</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">Last Name:</span>
+                        <span class="user-info-value" id="userLastName">-</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">Email:</span>
+                        <span class="user-info-value" id="userEmail">-</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">Member Since:</span>
+                        <span class="user-info-value" id="userCreatedAt">-</span>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+
+                <!-- Quiz History Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <span class="icon">📊</span>
+                        <h3>Quiz History</h3>
+                    </div>
+                    <div id="quizHistoryList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No quiz history yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review History Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <span class="icon">⭐</span>
+                        <h3>My Reviews</h3>
+                    </div>
+                    <div id="reviewHistoryList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⭐</div>
+                            <p>No reviews yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://jmaxlblmncctabomgfqw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Check if user is logged in
+        const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+        
+        if (!user) {
+            window.location.href = 'login.html';
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDateShort(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric'
+            });
+        }
+
+        // Load user data
+        async function loadUserData() {
+            // Display basic user info
+            document.getElementById('userName').textContent = user.first_name;
+            document.getElementById('userFirstName').textContent = user.first_name;
+            document.getElementById('userLastName').textContent = user.last_name;
+            document.getElementById('userEmail').textContent = user.email;
+
+            try {
+                // Fetch full user data including created_at
+                const { data: userData, error: userError } = await supabaseClient
+                    .from('users')
+                    .select('created_at')
+                    .eq('user_id', user.user_id)
+                    .single();
+
+                if (userData) {
+                    const createdAt = formatDateShort(userData.created_at);
+                    document.getElementById('userCreatedAt').textContent = createdAt;
+                    document.getElementById('memberSince').textContent = new Date(userData.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Load quiz history
+       // Load quiz history (updated for your current quiz_responses table)
+async function loadQuizHistory() {
+    try {
+        const { data: quizzes, error } = await supabaseClient
+            .from('quiz_responses')
+            .select('*')
+            .eq('user_id', user.user_id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const quizHistoryList = document.getElementById('quizHistoryList');
+
+        if (!quizzes || quizzes.length === 0) {
+            quizHistoryList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>No quiz history yet. <a href="index.html" style="color: #7e22ce;">Take your first check-in!</a></p>
+                </div>
+            `;
+            document.getElementById('totalQuizzes').textContent = '0';
+            document.getElementById('avgScore').textContent = '0%';
+            return;
+        }
+
+        // Calculate average score
+        const totalScore = quizzes.reduce((sum, quiz) => sum + quiz.total_score, 0);
+        const avgScore = Math.round((totalScore / (quizzes.length * 25)) * 100);
+        
+        document.getElementById('totalQuizzes').textContent = quizzes.length;
+        document.getElementById('avgScore').textContent = avgScore + '%';
+
+        quizHistoryList.innerHTML = quizzes.map(quiz => `
+            <div class="history-item">
+                <div class="history-item-header">
+                    <span class="history-date">${formatDate(quiz.created_at)}</span>
+                    <span class="history-score">${quiz.total_score}/25</span>
+                </div>
+
+                <div class="history-result">
+                    <strong>Result:</strong> ${quiz.result_category} ${quiz.emoji ? quiz.emoji : ''}
+                </div>
+
+                ${quiz.category ? `<div class="history-category">🏷️ Category: ${quiz.category}</div>` : ''}
+                ${quiz.needs_support ? '<div class="history-support">⚠️ Support Recommended</div>' : ''}
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error loading quiz history:', error);
+        document.getElementById('quizHistoryList').innerHTML = `
+            <div class="empty-state">
+                <p style="color: #ef4444;">Error loading quiz history</p>
+            </div>
+        `;
+    }
+}
+
+// Toggle function to show/hide quiz details
+function toggleDetails(responseId) {
+    const detailsDiv = document.getElementById(`details-${responseId}`);
+    const toggleText = document.getElementById(`toggle-text-${responseId}`);
+    
+    if (detailsDiv.style.display === 'none') {
+        detailsDiv.style.display = 'block';
+        toggleText.textContent = 'Hide Details';
+    } else {
+        detailsDiv.style.display = 'none';
+        toggleText.textContent = 'Show Details';
+    }
+}
+
+
+        // Load review history
+        async function loadReviewHistory() {
+            try {
+                const { data: reviews, error } = await supabaseClient
+                    .from('reviews')
+                    .select('*')
+                    .eq('user_id', user.user_id)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const reviewHistoryList = document.getElementById('reviewHistoryList');
+                
+                if (!reviews || reviews.length === 0) {
+                    reviewHistoryList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⭐</div>
+                            <p>No reviews yet</p>
+                        </div>
+                    `;
+                    document.getElementById('totalReviews').textContent = '0';
+                    return;
+                }
+
+                document.getElementById('totalReviews').textContent = reviews.length;
+
+                reviewHistoryList.innerHTML = reviews.map(review => `
+                    <div class="review-item">
+                        <div class="review-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+                        <div class="review-date">${formatDate(review.created_at)}</div>
+                        ${review.feedback ? `<div class="review-feedback">"${review.feedback}"</div>` : '<div class="review-feedback">No additional feedback</div>'}
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading review history:', error);
+                document.getElementById('reviewHistoryList').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: #ef4444;">Error loading reviews</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('user');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Load all data on page load
+        loadUserData();
+        loadQuizHistory();
+        loadReviewHistory();
+    </script>
+</body>
+</html>

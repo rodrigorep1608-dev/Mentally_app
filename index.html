@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Are You Doing Today?</title>
+    <link rel="stylesheet" href="./styles/styles.css">
+   
+
+
+
+</head>
+<body>
+    <!-- Left Navigation Bar -->
+    <div id="nav-placeholder"></div>
+
+    <script>
+      fetch("nav.html")
+  .then(response => response.text())
+  .then(data => {
+    document.getElementById("nav-placeholder").innerHTML = data;
+    setupDynamicNav(); // run JS after loading
+  });
+
+// Change nav links dynamically based on login state
+function setupDynamicNav() {
+  const navLinks = document.getElementById("nav-links");
+  // FIXED: Changed from localStorage to sessionStorage to match login.html
+  const user = JSON.parse(sessionStorage.getItem("user")); 
+
+  if (user) {
+    navLinks.innerHTML = `
+      <li><a href="index.html">🏠 Home</a></li>
+      <li><a href="user.dashboard.html">👤 Dashboard</a></li>
+      <li><a href="#" onclick="logout()">🚪 Logout</a></li>
+    `;
+  } else {
+    navLinks.innerHTML = `
+      <li><a href="index.html">🏠 Home</a></li>
+      <li><a href="login.html">👤 Login</a></li>
+    `;
+  }
+}
+
+function logout() {
+  // FIXED: Changed from localStorage to sessionStorage
+  sessionStorage.removeItem("user");
+  window.location.href = 'login.html'; // Redirect to login after logout
+}
+    </script>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>💙 How Are You Doing Today?</h1>
+                <p id="headerSubtitle">Take a moment to check in with yourself</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Start Screen -->
+                <div class="start-screen active" id="startScreen">
+                    <h2>Welcome!</h2>
+                    <p>This is a safe space to reflect on how you're feeling. Answer a few questions honestly, and we'll provide personalized support and resources based on your responses.</p>
+                    <p style="color: #94a3b8; font-size: 14px; margin-top: 20px;">Your responses are private and anonymous.</p>
+                    <button class="btn" onclick="startQuiz()">Start Check-In</button>
+                </div>
+
+                <!-- Quiz Screen -->
+                <div class="quiz-screen" id="quizScreen">
+                    <div class="question-counter" id="questionCounter">Question 1 of 5</div>
+                    <div class="question" id="question"></div>
+                    <div class="options" id="options"></div>
+                    <div class="quiz-actions">
+                        <button class="btn" id="nextBtn" onclick="nextQuestion()" style="display: none;">Next Question</button>
+                    </div>
+                </div>
+
+                <!-- Results Screen -->
+                <div class="results-screen" id="resultsScreen">
+                    <div class="result-icon" id="resultIcon"></div>
+                    <h2 class="result-title" id="resultTitle"></h2>
+                    
+                    <div class="result-message" id="resultMessage"></div>
+
+                    <div id="supportSection"></div>
+                    <div id="encouragementSection"></div>
+
+                    <button class="btn" onclick="restartQuiz()">Take Check-In Again</button>
+                    <button class="btn" onclick="window.location.href='rating.html'">⭐ Rate the Experience</button>
+                </div> 
+            </div>
+        </div>
+    </div>
+
+    <script src="./Js/app.js"></script>
+</body>
+</html>

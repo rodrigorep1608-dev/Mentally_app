@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Mental Health Check-In</title>
+    <link rel="stylesheet" href="./styles/styles.css">
+    <link rel="stylesheet" href="./styles/signup.css">
+    
+</head>
+<body>
+    <!-- Left Navigation Bar -->
+   <link rel="stylesheet" href="nav.html">
+
+   
+    <div class="signup-wrapper">
+    <div class="signup-container">
+        <h2>Create Account</h2>
+        
+        <div class="success-message" id="successMessage">
+            ✅ Account created successfully! Redirecting to login...
+        </div>
+
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" placeholder="Enter your first name" required>
+                <div class="error-message" id="firstNameError"></div>
+            </div>
+    
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" placeholder="Enter your last name" required>
+                <div class="error-message" id="lastNameError"></div>
+            </div>
+    
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email" required>
+                <div class="error-message" id="emailError"></div>
+            </div>
+    
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Create a password (min 6 characters)" required minlength="6">
+                <div class="error-message" id="passwordError"></div>
+            </div>
+    
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
+                <div class="error-message" id="confirmPasswordError"></div>
+            </div>
+    
+            <button type="submit" class="btn-signup">Sign Up</button>
+        </form>
+    
+        <p class="login-text">
+            Already have an account? <a href="login.html">Log in</a>
+        </p>
+    </div>
+
+<!-- Add before closing </body> tag -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+    // Supabase configuration
+    const SUPABASE_URL = 'https://jmaxlblmncctabomgfqw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA';
+    
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Hash password function
+    async function hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Clear all error messages
+    function clearErrors() {
+        document.querySelectorAll('.error-message').forEach(el => {
+            el.classList.remove('show');
+            el.textContent = '';
+        });
+        document.querySelectorAll('input').forEach(el => {
+            el.classList.remove('error');
+        });
+    }
+
+    // Show error message
+    function showError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + 'Error');
+        const inputEl = document.getElementById(fieldId);
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+        if (inputEl) {
+            inputEl.classList.add('error');
+        }
+    }
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearErrors();
+        
+        const firstName = document.getElementById('first_name').value.trim();
+        const lastName = document.getElementById('last_name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        // Validation
+        let hasError = false;
+
+        if (!firstName) {
+            showError('first_name', 'First name is required');
+            hasError = true;
+        }
+
+        if (!lastName) {
+            showError('last_name', 'Last name is required');
+            hasError = true;
+        }
+
+        if (!email) {
+            showError('email', 'Email is required');
+            hasError = true;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showError('email', 'Please enter a valid email address');
+            hasError = true;
+        }
+
+        if (!password) {
+            showError('password', 'Password is required');
+            hasError = true;
+        } else if (password.length < 6) {
+            showError('password', 'Password must be at least 6 characters long');
+            hasError = true;
+        }
+
+        if (password !== confirmPassword) {
+            showError('confirmPassword', 'Passwords do not match');
+            hasError = true;
+        }
+
+        if (hasError) return;
+
+        try {
+            // Disable submit button
+            const submitBtn = document.querySelector('.btn-signup');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            // Hash the password
+            const hashedPassword = await hashPassword(password);
+
+            // Insert user into Supabase
+            const { data, error } = await supabaseClient
+                .from('users')
+                .insert([
+                    {
+                        first_name: firstName,
+                        last_name: lastName,
+                        email: email,
+                        password: hashedPassword
+                    }
+                ])
+                .select();
+
+            if (error) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign Up';
+
+                if (error.code === '23505') {
+                    showError('email', 'This email is already registered. Please use a different email or log in.');
+                } else {
+                    showError('email', 'Error creating account: ' + error.message);
+                }
+                return;
+            }
+
+            // Show success message
+            document.getElementById('successMessage').classList.add('show');
+            document.getElementById('signupForm').style.display = 'none';
+
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+
+        } catch (error) {
+            console.error('Error:', error);
+            showError('email', 'An unexpected error occurred. Please try again.');
+            
+            const submitBtn = document.querySelector('.btn-signup');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign Up';
+        }
+    });
+
+    // Clear error when user types
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('error');
+            const errorEl = document.getElementById(this.id + 'Error');
+            if (errorEl) {
+                errorEl.classList.remove('show');
+            }
+        });
+    });
+</script>
+</script>
+</body>
+</html>

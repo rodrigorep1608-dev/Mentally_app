@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Your Experience</title>
+    <link rel="stylesheet" href="./styles/styles.css">
+    <link rel="stylesheet" href="./styles/rating.css">
+</head>
+<body>
+    <!-- Rating Form -->
+    <div class="rating-wrapper">
+        <div class="rating-container">
+            <h2>⭐ Rate Your Experience</h2>
+            <p>How was your experience using our mental health check-in tool?</p>
+
+            <div class="stars" id="starContainer">
+                <span class="star" data-value="1">★</span>
+                <span class="star" data-value="2">★</span>
+                <span class="star" data-value="3">★</span>
+                <span class="star" data-value="4">★</span>
+                <span class="star" data-value="5">★</span>
+            </div>
+
+            <form id="ratingForm">
+                <div class="feedback-group">
+                    <label for="feedback">Additional Feedback (Optional)</label>
+                    <textarea id="feedback" placeholder="Tell us about your experience..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit-rating">Submit Rating</button>
+            </form>
+
+            <div class="thank-you" id="thankYouMessage">
+                <h3>🎉 Thank You!</h3>
+                <p>Your feedback helps us improve our service and better support others. Redirecting you back...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://jmaxlblmncctabomgfqw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptYXhsYmxtbmNjdGFib21nZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMjU1MjksImV4cCI6MjA3NjcwMTUyOX0.faBQy2IyUPv8MNsDjyqs_uhVQIPlCZaVmdJP8jKD-AA';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let selectedRating = 0;
+
+        // Star rating functionality
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.getAttribute('data-value'));
+                updateStars();
+            });
+
+            star.addEventListener('mouseenter', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                highlightStars(value);
+            });
+        });
+
+        document.getElementById('starContainer').addEventListener('mouseleave', function() {
+            updateStars();
+        });
+
+        function highlightStars(value) {
+            stars.forEach((star, index) => {
+                if (index < value) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        function updateStars() {
+            stars.forEach((star, index) => {
+                if (index < selectedRating) {
+                    star.classList.add('selected');
+                } else {
+                    star.classList.remove('selected');
+                }
+            });
+        }
+
+        // Form submission
+        document.getElementById('ratingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (selectedRating === 0) {
+                alert('Please select a star rating first.');
+                return;
+            }
+
+            const feedback = document.getElementById('feedback').value;
+            const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+
+            if (user) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('reviews')
+                        .insert([{
+                            user_id: user.user_id,
+                            rating: selectedRating,
+                            feedback: feedback || null
+                        }]);
+
+                    if (error) {
+                        console.error('Error saving review:', error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            // Show thank you message
+            document.getElementById('ratingForm').style.display = 'none';
+            document.getElementById('starContainer').style.display = 'none';
+            document.querySelector('.rating-container > p').style.display = 'none';
+            document.getElementById('thankYouMessage').style.display = 'block';
+
+            // Redirect after 3 seconds
+            setTimeout(() => {
+                window.location.href = user ? 'user.dashboard.html' : 'index.html';
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
