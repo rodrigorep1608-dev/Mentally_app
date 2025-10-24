@@ -258,6 +258,20 @@ async function showResults() {
     }
 }
 
+// Check if user is logged in before allowing them to rate
+function checkLoginBeforeRating() {
+    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    
+    if (user) {
+        // User is logged in, redirect to rating page
+        window.location.href = 'rating.html';
+    } else {
+        // User is not logged in, show alert and redirect to login
+        alert('You must be logged in to rate the experience.');
+        window.location.href = 'login.html';
+    }
+}
+
 // Restart quiz
 function restartQuiz() {
     document.getElementById('resultsScreen').classList.remove('active');
